@@ -1,0 +1,231 @@
+
+
+<!DOCTYPE html>
+
+<html lang="ar" dir="rtl">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>ممنوع الدخول 3D</title>
+
+<style>
+
+body{margin:0;background:#090d16;color:white;font-family:Arial,sans-serif;overflow:hidden}
+
+#scene{width:100vw;height:100vh}
+
+header{position:absolute;top:12px;width:100%;text-align:center;pointer-events:none}
+
+h1{color:#ff4545;font-size:32px}
+
+p{font-size:16px}
+
+footer{position:absolute;bottom:12px;width:100%;text-align:center;font-size:13px}
+
+</style>
+
+</head>
+
+<body>
+
+<header><h1>ممنوع الدخول</h1><p>حارس 3D متحرّك</p></header>
+
+<div id="scene"></div>
+
+<footer>اسحب الشاشة يمينًا ويسارًا لتدوير الشخصية</footer>
+
+<script type="module">
+
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+
+const scene=new THREE.Scene();
+
+scene.background=new THREE.Color('#090d16');
+
+const camera=new THREE.PerspectiveCamera(40,innerWidth/innerHeight,.1,100);
+
+camera.position.set(0,1.5,7);
+
+const renderer=new THREE.WebGLRenderer({antialias:true});
+
+renderer.setSize(innerWidth,innerHeight);
+
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+
+document.querySelector('#scene').appendChild(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0xffffff,0x303044,2));
+
+const light=new THREE.DirectionalLight(0xffffff,3);
+
+light.position.set(4,5,5);scene.add(light);
+
+const mat=c=>new THREE.MeshStandardMaterial({color:c,roughness:.55});
+
+const skin=mat('#c98f70'),hair=mat('#282128'),uniform=mat('#182536');
+
+const black=mat('#111111'),red=mat('#ff2525'),white=mat('#ffffff');
+
+const character=new THREE.Group();scene.add(character);
+
+function sphere(parent,m,x,y,z,sx,sy,sz){
+
+ const o=new THREE.Mesh(new THREE.SphereGeometry(1,24,20),m);
+
+ o.position.set(x,y,z);o.scale.set(sx,sy,sz);parent.add(o);return o;
+
+}
+
+function cube(parent,m,x,y,z,sx,sy,sz){
+
+ const o=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),m);
+
+ o.position.set(x,y,z);parent.add(o);return o;
+
+}
+
+sphere(character,uniform,0,.1,0,.55,.7,.35);
+
+sphere(character,skin,0,1.1,0,.72,.78,.62);
+
+sphere(character,hair,0,1.62,-.04,.7,.32,.59);
+
+for(const side of [-1,1]){
+
+ sphere(character,skin,side*.72,1.1,0,.13,.18,.13);
+
+ sphere(character,black,side*.29,1.16,.53,.24,.19,.07);
+
+ const rim=new THREE.Mesh(new THREE.TorusGeometry(.22,.035,8,28),black);
+
+ rim.position.set(side*.29,1.16,.58);character.add(rim);
+
+ sphere(character,black,side*.29,1.16,.59,.035,.035,.02);
+
+}
+
+cube(character,black,0,1.17,.57,.15,.045,.05);
+
+sphere(character,skin,0,.94,.58,.1,.12,.1);
+
+cube(character,black,0,.76,.55,.22,.035,.025);
+
+for(const side of [-1,1]){
+
+ const leg=new THREE.Mesh(new THREE.CylinderGeometry(.16,.2,.65,20),black);
+
+ leg.position.set(side*.27,-.57,0);character.add(leg);
+
+ sphere(character,black,side*.29,-.9,.1,.23,.12,.32);
+
+}
+
+const arms=[];
+
+for(const side of [-1,1]){
+
+ const arm=new THREE.Group();arm.position.set(side*.55,.48,0);
+
+ const sleeve=new THREE.Mesh(new THREE.CylinderGeometry(.13,.17,.55,18),uniform);
+
+ sleeve.position.y=-.25;arm.add(sleeve);
+
+ sphere(arm,skin,0,-.58,.06,.14,.16,.14);
+
+ character.add(arm);arms.push(arm);
+
+}
+
+cube(character,white,0,.1,.36,.35,.18,.035);
+
+const sign=new THREE.Group();sign.position.set(1.8,.65,-.4);scene.add(sign);
+
+cube(sign,black,0,0,0,1.5,2,.15);
+
+const circle=new THREE.Mesh(new THREE.TorusGeometry(.43,.07,10,40),red);
+
+circle.position.z=.1;circle.position.y=.3;sign.add(circle);
+
+cube(sign,white,0,.3,.12,.68,.11,.05);
+
+const canvas=document.createElement('canvas');
+
+canvas.width=512;canvas.height=128;
+
+const ctx=canvas.getContext('2d');
+
+ctx.fillStyle='#ff3030';ctx.font='bold 54px Arial';
+
+ctx.textAlign='center';ctx.textBaseline='middle';
+
+ctx.direction='rtl';ctx.fillText('ممنوع الدخول',256,64);
+
+const texture=new THREE.CanvasTexture(canvas);
+
+texture.colorSpace=THREE.SRGBColorSpace;
+
+const label=new THREE.Mesh(new THREE.PlaneGeometry(1.35,.34),
+
+ new THREE.MeshBasicMaterial({map:texture,transparent:true}));
+
+label.position.set(0,-.45,.1);sign.add(label);
+
+let rotation=0,drag=false,lastX=0;
+
+renderer.domElement.addEventListener('pointerdown',e=>{drag=true;lastX=e.clientX});
+
+window.addEventListener('pointerup',()=>drag=false);
+
+window.addEventListener('pointermove',e=>{
+
+ if(drag){rotation+=(e.clientX-lastX)*.01;lastX=e.clientX;}
+
+});
+
+const clock=new THREE.Clock();
+
+function animate(){
+
+ requestAnimationFrame(animate);
+
+ const t=clock.getElapsedTime();
+
+ character.rotation.y=rotation+Math.sin(t*.5)*.12;
+
+ character.position.y=Math.sin(t*2)*.06;
+
+ character.rotation.z=Math.sin(t*1.5)*.025;
+
+ arms[0].rotation.z=.3+Math.sin(t*3)*.35;
+
+ arms[1].rotation.z=-.1+Math.sin(t*2)*.08;
+
+ sign.rotation.y=Math.sin(t)*.04;
+
+ renderer.render(scene,camera);
+
+}
+
+animate();
+
+window.addEventListener('resize',()=>{
+
+ camera.aspect=innerWidth/innerHeight;
+
+ camera.updateProjectionMatrix();
+
+ renderer.setSize(innerWidth,innerHeight);
+
+});
+
+</script>
+
+</body>
+
+</html>
